@@ -155,6 +155,11 @@ export function UserManagement({ currentUser }: UserManagementProps) {
           </button>
         </div>
         <MFASetup userId={mfaUserId} onMFAEnabled={handleMFAEnabled} />
+        <MFASetup 
+          userId={mfaUserId} 
+          userEmail={users.find(u => u.id === mfaUserId)?.email || ''} 
+          onMFAEnabled={handleMFAEnabled} 
+        />
       </div>
     );
   }
