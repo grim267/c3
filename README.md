@@ -286,3 +286,73 @@ npm install
 npm run dev
 ```
 The React app will fetch alerts from the backend bridge (and still listens to Supabase realtime if configured).
+
+## Starting Backend Services
+
+### Quick Start - All Services
+```bash
+# Start all backend services at once
+python start_all_backends.py
+```
+
+### Individual Services
+
+#### 1. Main API Server (Port 8000)
+```bash
+python api_server.py
+```
+
+#### 2. Threat Ingestion API (Port 8001)
+```bash
+python backend/threat_ingestion_api.py
+```
+
+#### 3. Critical Incidents Backend (Port 8002)
+```bash
+python start_critical_incidents.py
+# OR directly:
+python critical_incidents_backend.py
+```
+
+#### 4. Threat Detection Backend (Port 5000)
+```bash
+python threat_detection_backend.py
+```
+
+#### 5. Network Traffic Monitor
+```bash
+# Requires root/admin privileges
+sudo python network_traffic_monitor.py
+# OR use the starter:
+python start_monitor.py
+```
+
+### Service Dependencies
+
+Make sure you have the required Python packages:
+```bash
+pip install -r requirements.txt
+```
+
+And your `.env` file is configured with:
+```env
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_service_key
+```
+
+### Service Overview
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| Main API | 8000 | Bridge between frontend and Supabase |
+| Threat Ingestion | 8001 | ML-powered threat analysis and storage |
+| Critical Incidents | 8002 | Critical incident detection and management |
+| Threat Detection | 5000 | Real-time packet capture and analysis |
+| Network Monitor | N/A | Raw packet capture (requires admin privileges) |
+
+### Connection Status
+
+The frontend dashboard shows connection status for each backend service:
+- **Backend Connected** - Main API (port 8000)
+- **Threats Connected** - Threat Ingestion API (port 8001) 
+- **Critical Connected** - Critical Incidents (port 8002)
