@@ -30,6 +30,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
     toggleMonitoring,
     backendConnected,
     backendStats,
+    threatBackendConnected,
     criticalIncidents,
     criticalIncidentsConnected
   } = useIncidentData();
@@ -401,6 +402,10 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
                 <div className={`w-2 h-2 rounded-full ml-2 ${backendConnected ? 'bg-blue-400' : 'bg-gray-400'}`} />
                 <span className="text-xs text-gray-400">
                   Backend {backendConnected ? 'Connected' : 'Disconnected'}
+                </span>
+                <div className={`w-2 h-2 rounded-full ml-2 ${threatBackendConnected ? 'bg-green-400' : 'bg-gray-400'}`} />
+                <span className="text-xs text-gray-400">
+                  Threats {threatBackendConnected ? 'Connected' : 'Disconnected'}
                 </span>
                 <div className={`w-2 h-2 rounded-full ml-2 ${criticalIncidentsConnected ? 'bg-red-400' : 'bg-gray-400'}`} />
                 <span className="text-xs text-gray-400">

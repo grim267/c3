@@ -40,7 +40,9 @@ export interface BackendStats {
 class BackendService {
   private socket: Socket | null = null;
   private backendUrl = 'http://localhost:5000';
+  private threatBackendUrl = 'http://localhost:8001'; // Threat ingestion API
   private isConnected = false;
+  private threatBackendConnected = false;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 3000;
@@ -49,10 +51,72 @@ class BackendService {
   private threatListeners: Array<(threat: BackendThreat) => void> = [];
   private statsListeners: Array<(stats: BackendStats) => void> = [];
   private connectionListeners: Array<(connected: boolean) => void> = [];
+  private threatBackendListeners: Array<(connected: boolean) => void> = [];
 
   constructor() {
     this.connect();
+    this.connectThreatBackend();
   }
+  private connectThreatBackend() {
+    try {
+      // Connect to threat ingestion API WebSocket
+      const threatWs = new WebSocket('ws://localhost:8001/ws/threats');
+      
+      threatWs.onopen = () => {
+        console.log('Connected to threat detection backend');
+        this.threatBackendConnected = true;
+        this.notifyThreatBackendListeners(true);
+      };
+      
+      threatWs.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'threat_detected') {
+            // Convert threat ingestion format to BackendThreat format
+            const threat: BackendThreat = {
+              id: data.data.id,
+              timestamp: data.data.timestamp,
+              source_ip: data.data.source_ip,
+              destination_ip: data.data.destination_ip || '',
+              threat_type: data.data.threat_type,
+              severity: data.data.severity,
+              confidence: data.data.confidence,
+              description: data.data.description,
+              indicators: data.data.classification?.rule_based?.rules_triggered || [],
+              blocked: false
+            };
+            this.notifyThreatListeners(threat);
+          }
+        } catch (error) {
+          console.error('Error parsing threat backend message:', error);
+        }
+      };
+      
+      threatWs.onclose = () => {
+        console.log('Disconnected from threat detection backend');
+        this.threatBackendConnected = false;
+        this.notifyThreatBackendListeners(false);
+        
+        // Attempt to reconnect
+        setTimeout(() => {
+          this.connectThreatBackend();
+        }, this.reconnectDelay);
+      };
+      
+      threatWs.onerror = (error) => {
+        console.error('Threat backend WebSocket error:', error);
+        this.threatBackendConnected = false;
+        this.notifyThreatBackendListeners(false);
+      };
+      
+    } catch (error) {
+      console.error('Failed to connect to threat backend:', error);
+      setTimeout(() => {
+        this.connectThreatBackend();
+      }, this.reconnectDelay);
+    }
+  }
+
 
   private connect() {
     try {
@@ -175,6 +239,13 @@ class BackendService {
     };
   }
 
+  onThreatBackendConnectionChange(callback: (connected: boolean) => void) {
+    this.threatBackendListeners.push(callback);
+    return () => {
+      this.threatBackendListeners = this.threatBackendListeners.filter(cb => cb !== callback);
+    };
+  }
+
   // Notification methods
   private notifyThreatListeners(threat: BackendThreat) {
     this.threatListeners.forEach(callback => {
@@ -206,6 +277,16 @@ class BackendService {
     });
   }
 
+  private notifyThreatBackendListeners(connected: boolean) {
+    this.threatBackendListeners.forEach(callback => {
+      try {
+        callback(connected);
+      } catch (error) {
+        console.error('Error in threat backend connection listener:', error);
+      }
+    });
+  }
+
   // Public API methods
   async blockIP(ip: string): Promise<boolean> {
     try {
@@ -233,12 +314,25 @@ class BackendService {
 
   async submitNetworkEvent(eventData: any): Promise<boolean> {
     try {
-      const response = await fetch(`${this.backendUrl}/api/submit_event`, {
+      // Submit to threat ingestion API
+      const response = await fetch(`${this.threatBackendUrl}/api/threats/ingest`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(eventData)
+        body: JSON.stringify({
+          source_ip: eventData.source_ip,
+          destination_ip: eventData.destination_ip,
+          threat_type: eventData.threat_type || 'unknown',
+          severity: eventData.severity || 5,
+          confidence: eventData.confidence || 0.5,
+          description: eventData.description || 'Network event detected',
+          protocol: eventData.protocol,
+          source_port: eventData.source_port,
+          destination_port: eventData.destination_port,
+          packet_size: eventData.packet_size,
+          payload: eventData.payload
+        })
       });
       return response.ok;
     } catch (error) {
@@ -251,12 +345,17 @@ class BackendService {
     return this.isConnected;
   }
 
+  isThreatBackendConnected(): boolean {
+    return this.threatBackendConnected;
+  }
+
   disconnect() {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
     }
     this.isConnected = false;
+    this.threatBackendConnected = false;
   }
 }
 

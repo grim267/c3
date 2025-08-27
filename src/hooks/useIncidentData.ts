@@ -34,6 +34,7 @@ export function useIncidentData() {
   const [isMonitoring, setIsMonitoring] = useState(true)
   const [backendConnected, setBackendConnected] = useState(false)
   const [backendStats, setBackendStats] = useState<BackendStats | null>(null)
+  const [threatBackendConnected, setThreatBackendConnected] = useState(false)
   const [criticalIncidents, setCriticalIncidents] = useState<CriticalIncident[]>([])
   const [criticalIncidentsConnected, setCriticalIncidentsConnected] = useState(false)
 
@@ -163,6 +164,10 @@ export function useIncidentData() {
       setBackendConnected(connected)
     })
 
+    const unsubscribeThreatBackend = backendService.onThreatBackendConnectionChange((connected: boolean) => {
+      setThreatBackendConnected(connected)
+    })
+
     // Set up critical incidents service listeners
     const unsubscribeCriticalIncident = criticalIncidentsService.onCriticalIncidentDetected((incident: CriticalIncident) => {
       setCriticalIncidents(prev => [incident, ...prev.slice(0, 49)])
@@ -210,6 +215,7 @@ export function useIncidentData() {
       unsubscribeThreat()
       unsubscribeStats()
       unsubscribeConnection()
+      unsubscribeThreatBackend()
       unsubscribeCriticalIncident()
       unsubscribeCriticalConnection()
       
@@ -288,6 +294,7 @@ export function useIncidentData() {
     acknowledgeAlert,
     resolveIncident,
     backendConnected,
+    threatBackendConnected,
     backendStats,
     criticalIncidents,
     criticalIncidentsConnected,
