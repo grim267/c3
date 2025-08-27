@@ -356,20 +356,20 @@ class NetworkTrafficMonitor:
         
         self.stats['alerts'].append(alert)
 
-# --- Supabase: send alert to remote DB (if configured) ---
-try:
-    supabase.table("alerts").insert({
-        "timestamp": packet_info['timestamp'].isoformat(),
-        "src_ip": packet_info.get('source'),
-        "dst_ip": packet_info.get('destination'),
-        "protocol": self.protocols.get(packet_info.get('protocol', 0), 'Unknown'),
-        "threat_level": threat_level,
-        "threats": threats,
-        "packet_size": packet_info.get('size', 0)
-    }).execute()
-except Exception as e:
-    # don't let DB errors stop the monitor; just log them
-    print(f"Error sending alert to Supabase: {e}")
+        # --- Supabase: send alert to remote DB (if configured) ---
+        try:
+            supabase.table("alerts").insert({
+                "timestamp": packet_info['timestamp'].isoformat(),
+                "src_ip": packet_info.get('source'),
+                "dst_ip": packet_info.get('destination'),
+                "protocol": self.protocols.get(packet_info.get('protocol', 0), 'Unknown'),
+                "threat_level": threat_level,
+                "threats": threats,
+                "packet_size": packet_info.get('size', 0)
+            }).execute()
+        except Exception as e:
+            # don't let DB errors stop the monitor; just log them
+            print(f"Error sending alert to Supabase: {e}")
         
         # Auto-block high threat IPs
         if threat_level >= 5:
@@ -471,7 +471,7 @@ except Exception as e:
     def print_security_dashboard(self):
         """Print comprehensive security dashboard"""
         print("\n" + "="*80)
-        print(f"🛡️  NETWORK SECURITY DASHBOARD - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"🛡️  NETWORK SECURITY DASHBOARD [{self.interface}] - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print("="*80)
         
         # Basic statistics
