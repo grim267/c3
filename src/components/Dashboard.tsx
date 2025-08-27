@@ -46,25 +46,29 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
   const safeAnomalies = anomalies || [];
   const safeNetworkTraffic = networkTraffic || [];
 
-  const criticalIncidentsCount = safeIncidents.filter(i => i.severity === 'critical').length;
+  const criticalIncidentsCount = criticalIncidents?.length || 0;
+  const localCriticalIncidents = safeIncidents.filter(i => i.severity === 'critical').length;
   const highIncidents = safeIncidents.filter(i => i.severity === 'high').length;
-  const activeIncidents = safeIncidents.filter(i => i.status !== 'resolved').length;
+  const activeLocalIncidents = safeIncidents.filter(i => i.status !== 'resolved').length;
   const onlineSystemsCount = safeSystemStatus.filter(s => s.status === 'online').length;
   const unacknowledgedAlerts = safeAlerts.filter(a => !a.acknowledged).length;
   const highConfidenceThreats = safeThreatDetections.filter(t => t.confidence > 80).length;
   const criticalAnomalies = safeAnomalies.filter(a => a.severity === 'critical').length;
 
+  // Calculate total active threats from all sources
+  const totalActiveThreats = activeLocalIncidents + highConfidenceThreats + criticalIncidentsCount + (backendStats?.active_threats || 0);
+
   const stats = [
     {
       title: 'Active Threats',
-      value: activeIncidents + highConfidenceThreats,
+      value: totalActiveThreats,
       icon: Shield,
       color: 'text-red-400',
       bgColor: 'bg-red-500/20'
     },
     {
       title: 'Critical Incidents',
-      value: criticalIncidentsCount + criticalAnomalies,
+      value: criticalIncidentsCount + localCriticalIncidents + criticalAnomalies,
       icon: AlertTriangle,
       color: 'text-orange-400',
       bgColor: 'bg-orange-500/20'
@@ -86,12 +90,12 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
   ];
 
   const sidebarStats = {
-    activeThreats: activeIncidents + highConfidenceThreats,
+    activeThreats: totalActiveThreats,
     networkTraffic: safeNetworkTraffic.length,
     systemsOnline: `${onlineSystemsCount}/${safeSystemStatus.length}`,
     activeAlerts: safeAlerts.filter(a => !a.acknowledged && !a.isDuplicate).length,
     recentIncidents: safeIncidents.length,
-    criticalIncidents: criticalIncidents?.length || 0
+    criticalIncidents: criticalIncidentsCount + localCriticalIncidents
   };
 
   const getSectionTitle = () => {
@@ -124,6 +128,51 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
       case 'threats':
         return (
           <div className="space-y-6">
+            {/* Active Threats Summary */}
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+              <h3 className="text-lg font-semibold text-white mb-4">Active Threats Overview</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-red-900/30 rounded-lg p-4">
+                  <div className="text-red-400 text-2xl font-bold">{activeLocalIncidents}</div>
+                  <div className="text-gray-400 text-sm">Local Incidents</div>
+                </div>
+                <div className="bg-orange-900/30 rounded-lg p-4">
+                  <div className="text-orange-400 text-2xl font-bold">{highConfidenceThreats}</div>
+                  <div className="text-gray-400 text-sm">High Confidence</div>
+                </div>
+                <div className="bg-purple-900/30 rounded-lg p-4">
+                  <div className="text-purple-400 text-2xl font-bold">{criticalIncidentsCount}</div>
+                  <div className="text-gray-400 text-sm">Critical Backend</div>
+                </div>
+                <div className="bg-blue-900/30 rounded-lg p-4">
+                  <div className="text-blue-400 text-2xl font-bold">{backendStats?.active_threats || 0}</div>
+                  <div className="text-gray-400 text-sm">Backend Threats</div>
+                </div>
+              </div>
+              {backendConnected && backendStats && (
+                <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-blue-300 mb-2">Backend Statistics</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                    <div>
+                      <span className="text-gray-400">Total Threats:</span>
+                      <span className="text-white ml-1">{backendStats.total_threats}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Blocked IPs:</span>
+                      <span className="text-white ml-1">{backendStats.blocked_ips}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Last Hour:</span>
+                      <span className="text-white ml-1">{backendStats.threats_last_hour}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Last 24h:</span>
+                      <span className="text-white ml-1">{backendStats.threats_last_24h}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
             <ThreatMap incidents={safeIncidents} />
             <IncidentList incidents={safeIncidents.filter(i => i.status !== 'resolved')} />
           </div>
@@ -135,7 +184,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
               <h3 className="text-lg font-semibold text-white mb-4">Critical Incidents Overview</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-red-900/30 rounded-lg p-4">
-                  <div className="text-red-400 text-2xl font-bold">{criticalIncidentsCount}</div>
+                  <div className="text-red-400 text-2xl font-bold">{criticalIncidentsCount + localCriticalIncidents}</div>
                   <div className="text-gray-400 text-sm">Critical Incidents</div>
                 </div>
                 <div className="bg-orange-900/30 rounded-lg p-4">
@@ -143,12 +192,12 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
                   <div className="text-gray-400 text-sm">High Priority</div>
                 </div>
                 <div className="bg-yellow-900/30 rounded-lg p-4">
-                  <div className="text-yellow-400 text-2xl font-bold">{activeIncidents}</div>
+                  <div className="text-yellow-400 text-2xl font-bold">{activeLocalIncidents}</div>
                   <div className="text-gray-400 text-sm">Total Active</div>
                 </div>
               </div>
             </div>
-            <IncidentList incidents={safeIncidents.filter(i => i.severity === 'critical')} />
+            <IncidentList incidents={safeIncidents.filter(i => i.severity === 'critical' || i.severity === 'high')} />
           </div>
         );
       case 'network':

@@ -41,7 +41,6 @@ export function useIncidentData() {
   // Fetch incidents from database
   async function fetchIncidents() {
     try {
-      console.log('Fetching incidents from database...')
       const { data, error } = await supabase
         .from('incidents')
         .select('*')
@@ -49,16 +48,15 @@ export function useIncidentData() {
         .limit(50)
       
       if (error) {
-        console.error('Error fetching incidents:', error)
+        console.error('Error fetching incidents from database:', error)
         return
       }
       
-      console.log('Raw incidents data from database:', data)
-      console.log('Number of incidents found:', data?.length || 0)
+      console.log(`📊 Fetched ${data?.length || 0} incidents from database`)
       
       if (data) {
         const transformedIncidents = data.map(transformDbIncidentToAppIncident)
-        console.log('Transformed incidents:', transformedIncidents)
+        console.log(`✅ Transformed ${transformedIncidents.length} incidents for display`)
         setIncidents(transformedIncidents)
       }
     } catch (error) {
