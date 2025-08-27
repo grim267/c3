@@ -6,6 +6,21 @@ import { generateSystemStatus, generateNetworkTraffic, generateAlert, generateTh
 
 import { fetchAlerts as fetchBackendAlerts } from '../services/backendApi'
 
+// Function to transform database incident to app incident format
+function transformDbIncidentToAppIncident(dbIncident: any): Incident {
+  return {
+    id: dbIncident.id,
+    timestamp: new Date(dbIncident.detected_at),
+    type: dbIncident.incident_type as any,
+    severity: dbIncident.severity as any,
+    source: dbIncident.source_ip || dbIncident.source_system || 'Unknown',
+    target: dbIncident.destination_ip || dbIncident.target_system || 'Unknown',
+    description: dbIncident.description,
+    status: dbIncident.status as any,
+    responseActions: [], // Will be populated from incident_actions table if needed
+    affectedSystems: dbIncident.affected_systems || []
+  }
+}
 
 export function useIncidentData() {
   const [incidents, setIncidents] = useState<Incident[]>([])
@@ -18,9 +33,35 @@ export function useIncidentData() {
   const [backendConnected, setBackendConnected] = useState(false)
   const [backendStats, setBackendStats] = useState<BackendStats | null>(null)
 
+  // Fetch incidents from database
+  async function fetchIncidents() {
+    try {
+      const { data, error } = await supabase
+        .from('incidents')
+        .select('*')
+        .order('detected_at', { ascending: false })
+        .limit(50)
+      
+      if (error) {
+        console.error('Error fetching incidents:', error)
+        return
+      }
+      
+      if (data) {
+        const transformedIncidents = data.map(transformDbIncidentToAppIncident)
+        setIncidents(transformedIncidents)
+      }
+    } catch (error) {
+      console.error('Failed to fetch incidents:', error)
+    }
+  }
+
   useEffect(() => {
     // Initialize with some default data
     setSystemStatus(generateSystemStatus())
+    
+    // Fetch real incidents from database
+    fetchIncidents()
     
     // Set up periodic data generation for demo purposes
     const interval = setInterval(() => {
@@ -117,6 +158,13 @@ export function useIncidentData() {
     fetchAlerts()
     fetchAlertsFromBackend()
 
+    // Set up real-time subscription for incidents
+    const incidentsChannel = supabase.channel('public:incidents')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'incidents' }, (payload) => {
+        console.log('Incident change detected:', payload)
+        fetchIncidents() // Refetch incidents when changes occur
+      })
+      .subscribe()
     const channel = supabase.channel('public:alerts')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'alerts' }, (payload) => {
         fetchAlerts()
@@ -130,6 +178,7 @@ export function useIncidentData() {
       unsubscribeConnection()
       
       try {
+        supabase.removeChannel(incidentsChannel)
         supabase.removeChannel(channel)
       } catch (e) {
         // ignore
@@ -164,6 +213,28 @@ export function useIncidentData() {
   }
 
   const resolveIncident = (incidentId: string) => {
+    // Update incident in database
+    const updateIncidentInDb = async () => {
+      try {
+        const { error } = await supabase
+          .from('incidents')
+          .update({ status: 'resolved', resolved_at: new Date().toISOString() })
+          .eq('id', incidentId)
+        
+        if (error) {
+          console.error('Error updating incident:', error)
+        } else {
+          // Update local state
+          setIncidents(prev => prev.map(incident => 
+            incident.id === incidentId ? { ...incident, status: 'resolved' as const } : incident
+          ))
+        }
+      } catch (error) {
+        console.error('Failed to update incident:', error)
+      }
+    }
+    
+    updateIncidentInDb()
     setIncidents(prev => prev.map(incident => 
       incident.id === incidentId ? { ...incident, status: 'resolved' as const } : incident
     ))
