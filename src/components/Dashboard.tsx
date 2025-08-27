@@ -29,7 +29,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
     isMonitoring, 
     toggleMonitoring,
     backendConnected,
-    backendStats
+    backendStats,
     criticalIncidents,
     criticalIncidentsConnected
   } = useIncidentData();
