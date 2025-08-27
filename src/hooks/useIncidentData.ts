@@ -10,7 +10,7 @@ import { fetchAlerts as fetchBackendAlerts } from '../services/backendApi'
 function transformDbIncidentToAppIncident(dbIncident: any): Incident {
   return {
     id: dbIncident.id,
-    timestamp: new Date(dbIncident.detected_at),
+    timestamp: new Date(dbIncident.created_at),
     type: dbIncident.incident_type as any,
     severity: dbIncident.severity as any,
     source: dbIncident.source_ip || dbIncident.source_system || 'Unknown',
@@ -39,7 +39,7 @@ export function useIncidentData() {
       const { data, error } = await supabase
         .from('incidents')
         .select('*')
-        .order('detected_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(50)
       
       if (error) {

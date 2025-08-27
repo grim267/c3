@@ -263,9 +263,9 @@ class ThreatMapService {
   private async getThreatsFromSupabase(filters: ThreatMapFilters): Promise<{ threats: GlobalThreat[]; total: number }> {
     try {
       let query = supabase
-        .from('global_threats')
+        .from('threat_intelligence')
         .select('*')
-        .eq('status', 'active')
+        .eq('is_active', true)
         .order('first_seen', { ascending: false });
 
       if (filters.hours) {
@@ -274,11 +274,13 @@ class ThreatMapService {
       }
 
       if (filters.min_severity) {
-        query = query.gte('severity', filters.min_severity);
+        query = query.eq('severity', filters.min_severity === 1 ? 'low' : 
+                                    filters.min_severity === 2 ? 'medium' : 
+                                    filters.min_severity === 3 ? 'high' : 'critical');
       }
 
       if (filters.country) {
-        query = query.eq('source_country_code', filters.country);
+        query = query.ilike('description', `%${filters.country}%`);
       }
 
       if (filters.limit) {
@@ -292,31 +294,25 @@ class ThreatMapService {
       }
 
       const threats: GlobalThreat[] = (data || []).map(row => ({
-        id: row.threat_id,
-        source_ip: row.source_ip,
-        destination_ip: row.destination_ip,
+        id: row.id,
+        source_ip: row.indicator_value,
+        destination_ip: '',
         threat_type: row.threat_type,
-        severity: row.severity,
+        severity: row.severity === 'low' ? 1 : row.severity === 'medium' ? 5 : row.severity === 'high' ? 8 : 10,
         confidence: row.confidence,
         description: row.description,
-        attack_vector: row.attack_vector || row.threat_type,
+        attack_vector: row.threat_type,
         first_seen: row.first_seen,
         last_seen: row.last_seen,
-        event_count: row.event_count || 1,
+        event_count: 1,
         source_location: {
-          country: row.source_country || 'Unknown',
-          country_code: row.source_country_code || 'XX',
-          city: row.source_city || 'Unknown',
-          latitude: row.source_latitude || 0,
-          longitude: row.source_longitude || 0
+          country: 'Unknown',
+          country_code: 'XX',
+          city: 'Unknown',
+          latitude: 0,
+          longitude: 0
         },
-        destination_location: row.dest_latitude && row.dest_longitude ? {
-          country: row.dest_country || 'Unknown',
-          country_code: row.dest_country_code || 'XX',
-          city: row.dest_city || 'Unknown',
-          latitude: row.dest_latitude,
-          longitude: row.dest_longitude
-        } : undefined
+        destination_location: undefined
       }));
 
       return { threats, total: threats.length };
