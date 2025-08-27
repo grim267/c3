@@ -332,6 +332,8 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
         return user ? <UserManagement currentUser={user} /> : null;
       case 'critical-incidents':
         return <CriticalIncidentsPanel />;
+      case 'compliance':
+        return <CompliancePanel />;
       default:
         return (
           <>

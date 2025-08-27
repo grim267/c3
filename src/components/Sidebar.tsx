@@ -11,7 +11,8 @@ import {
   BarChart3,
   Brain,
   Mail,
-  UserPlus
+  UserPlus,
+  Lock
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -113,6 +114,13 @@ export function Sidebar({
       icon: UserPlus,
       count: null,
       color: 'text-purple-400'
+    },
+    {
+      id: 'compliance',
+      label: 'HIPAA/GDPR Compliance',
+      icon: Lock,
+      count: null,
+      color: 'text-blue-500'
     }
   ];
 
