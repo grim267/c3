@@ -10,6 +10,9 @@ interface IncidentListProps {
 export function IncidentList({ incidents }: IncidentListProps) {
   const { resolveIncident } = useIncidentData();
 
+  console.log('IncidentList received incidents:', incidents)
+  console.log('Number of incidents to display:', incidents?.length || 0)
+
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'critical':

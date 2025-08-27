@@ -9,9 +9,10 @@ import { fetchAlerts as fetchBackendAlerts } from '../services/backendApi'
 
 // Function to transform database incident to app incident format
 function transformDbIncidentToAppIncident(dbIncident: any): Incident {
+  console.log('Transforming incident:', dbIncident)
   return {
     id: dbIncident.id,
-    timestamp: new Date(dbIncident.detected_at),
+    timestamp: new Date(dbIncident.created_at),
     type: dbIncident.incident_type as any,
     severity: dbIncident.severity as any,
     source: dbIncident.source_ip || dbIncident.source_system || 'Unknown',
@@ -39,10 +40,11 @@ export function useIncidentData() {
   // Fetch incidents from database
   async function fetchIncidents() {
     try {
+      console.log('Fetching incidents from database...')
       const { data, error } = await supabase
         .from('incidents')
         .select('*')
-        .order('detected_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(50)
       
       if (error) {
@@ -50,8 +52,12 @@ export function useIncidentData() {
         return
       }
       
+      console.log('Raw incidents data from database:', data)
+      console.log('Number of incidents found:', data?.length || 0)
+      
       if (data) {
         const transformedIncidents = data.map(transformDbIncidentToAppIncident)
+        console.log('Transformed incidents:', transformedIncidents)
         setIncidents(transformedIncidents)
       }
     } catch (error) {
