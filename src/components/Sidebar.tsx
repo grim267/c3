@@ -26,6 +26,7 @@ interface SidebarProps {
     systemsOnline: string;
     activeAlerts: number;
     recentIncidents: number;
+    criticalIncidents: number;
   };
 }
 
@@ -98,6 +99,13 @@ export function Sidebar({
       icon: Mail,
       count: null,
       color: 'text-indigo-400'
+    },
+    {
+      id: 'critical-incidents',
+      label: 'Critical Incidents',
+      icon: AlertTriangle,
+      count: stats.criticalIncidents,
+      color: 'text-red-500'
     },
     {
       id: 'user-management',

@@ -9,6 +9,7 @@ import { AlertPanel } from './AlertPanel';
 import { ThreatDetectionPanel } from './ThreatDetectionPanel';
 import { SystemAlertPanel } from './SystemAlertPanel';
 import { UserManagement } from './UserManagement';
+import { CriticalIncidentsPanel } from './CriticalIncidentsPanel';
 import { useIncidentData } from '../hooks/useIncidentData';
 import { User } from '../types/user';
 
@@ -29,6 +30,8 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
     toggleMonitoring,
     backendConnected,
     backendStats
+    criticalIncidents,
+    criticalIncidentsConnected
   } = useIncidentData();
   
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
@@ -87,7 +90,8 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
     networkTraffic: safeNetworkTraffic.length,
     systemsOnline: `${onlineSystemsCount}/${safeSystemStatus.length}`,
     activeAlerts: safeAlerts.filter(a => !a.acknowledged && !a.isDuplicate).length,
-    recentIncidents: safeIncidents.length
+    recentIncidents: safeIncidents.length,
+    criticalIncidents: criticalIncidents?.length || 0
   };
 
   const getSectionTitle = () => {
@@ -108,6 +112,8 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
         return 'Threat Detection & Anomalies';
       case 'user-management':
         return 'User Management';
+      case 'critical-incidents':
+        return 'Critical Incidents';
       default:
         return 'Dashboard Overview';
     }
@@ -275,6 +281,8 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
         return <SystemAlertPanel />;
       case 'user-management':
         return user ? <UserManagement currentUser={user} /> : null;
+      case 'critical-incidents':
+        return <CriticalIncidentsPanel />;
       default:
         return (
           <>
@@ -394,6 +402,10 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
                 <div className={`w-2 h-2 rounded-full ml-2 ${backendConnected ? 'bg-blue-400' : 'bg-gray-400'}`} />
                 <span className="text-xs text-gray-400">
                   Backend {backendConnected ? 'Connected' : 'Disconnected'}
+                </span>
+                <div className={`w-2 h-2 rounded-full ml-2 ${criticalIncidentsConnected ? 'bg-red-400' : 'bg-gray-400'}`} />
+                <span className="text-xs text-gray-400">
+                  Critical {criticalIncidentsConnected ? 'Connected' : 'Disconnected'}
                 </span>
               </div>
               <button

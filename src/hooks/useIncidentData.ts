@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { backendService, BackendThreat, BackendStats } from '../services/backendService'
+import { criticalIncidentsService, CriticalIncident } from '../services/criticalIncidentsService'
 import { Incident, NetworkTraffic, SystemStatus, Alert, ThreatDetection, AnomalyDetection } from '../types/incident'
 import { generateSystemStatus, generateNetworkTraffic, generateAlert, generateThreatDetection, generateAnomalyDetection, correlateAlerts } from '../utils/dataSimulator'
 
@@ -32,6 +33,8 @@ export function useIncidentData() {
   const [isMonitoring, setIsMonitoring] = useState(true)
   const [backendConnected, setBackendConnected] = useState(false)
   const [backendStats, setBackendStats] = useState<BackendStats | null>(null)
+  const [criticalIncidents, setCriticalIncidents] = useState<CriticalIncident[]>([])
+  const [criticalIncidentsConnected, setCriticalIncidentsConnected] = useState(false)
 
   // Fetch incidents from database
   async function fetchIncidents() {
@@ -154,6 +157,31 @@ export function useIncidentData() {
       setBackendConnected(connected)
     })
 
+    // Set up critical incidents service listeners
+    const unsubscribeCriticalIncident = criticalIncidentsService.onCriticalIncidentDetected((incident: CriticalIncident) => {
+      setCriticalIncidents(prev => [incident, ...prev.slice(0, 49)])
+      
+      // Also add to regular incidents for dashboard display
+      const regularIncident: Incident = {
+        id: incident.id,
+        timestamp: new Date(incident.detected_at),
+        type: incident.incident_type as any,
+        severity: incident.severity as any,
+        source: incident.source_ip || incident.source_system || 'Unknown',
+        target: incident.destination_ip || incident.target_system || 'Unknown',
+        description: incident.description,
+        status: incident.status as any,
+        responseActions: ['Investigate immediately', 'Notify security team', 'Isolate affected systems'],
+        affectedSystems: incident.affected_systems
+      }
+      
+      setIncidents(prev => [regularIncident, ...prev.slice(0, 49)])
+    })
+
+    const unsubscribeCriticalConnection = criticalIncidentsService.onConnectionChange((connected: boolean) => {
+      setCriticalIncidentsConnected(connected)
+    })
+
     // Supabase setup (keep existing functionality)
     fetchAlerts()
     fetchAlertsFromBackend()
@@ -176,6 +204,8 @@ export function useIncidentData() {
       unsubscribeThreat()
       unsubscribeStats()
       unsubscribeConnection()
+      unsubscribeCriticalIncident()
+      unsubscribeCriticalConnection()
       
       try {
         supabase.removeChannel(incidentsChannel)
@@ -253,6 +283,8 @@ export function useIncidentData() {
     resolveIncident,
     backendConnected,
     backendStats,
+    criticalIncidents,
+    criticalIncidentsConnected,
     blockIP: backendService.blockIP.bind(backendService),
     unblockIP: backendService.unblockIP.bind(backendService)
   }
