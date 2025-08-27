@@ -59,6 +59,7 @@ export function ThreatMap({ incidents }: ThreatMapProps) {
 
           {/* Local incident indicators */}
           {recentIncidents.map((incident, index) => (
+            <div
               key={incident.id}
               className={`absolute w-4 h-4 rounded-full animate-pulse ${
               incident.severity === 'critical' ? 'bg-red-500' :
@@ -80,6 +81,7 @@ export function ThreatMap({ incidents }: ThreatMapProps) {
                   incident.severity === 'medium' ? 'bg-yellow-500' :
                   'bg-blue-500'
                 }`}></div>
+            </div>
             </div>
           ))}
         </div>
