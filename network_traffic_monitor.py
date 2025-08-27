@@ -603,7 +603,7 @@ class NetworkTrafficMonitor:
             
             # Save comprehensive security report
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            self.save_security_report(f'security_report_{timestamp}.json')
+            self.save_security_report(f'security_report_{self.interface}_{timestamp}.json')
 
 def main():
     parser = argparse.ArgumentParser(description='Advanced Network Security Monitor')
