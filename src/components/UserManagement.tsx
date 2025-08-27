@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Plus, Edit, Trash2, Shield, Mail, Calendar, CheckCircle, XCircle } from 'lucide-react';
 import { User, UserRole, CreateUserData } from '../types/user';
 import { authService } from '../services/authService';
+import { MFASetup } from './MFASetup';
 
 interface UserManagementProps {
   currentUser: User;
@@ -11,6 +12,8 @@ export function UserManagement({ currentUser }: UserManagementProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showMFASetup, setShowMFASetup] = useState(false);
+  const [mfaUserId, setMfaUserId] = useState<string>('');
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -105,6 +108,16 @@ export function UserManagement({ currentUser }: UserManagementProps) {
     }
   };
 
+  const handleSetupMFA = (userId: string) => {
+    setMfaUserId(userId);
+    setShowMFASetup(true);
+  };
+
+  const handleMFAEnabled = () => {
+    setShowMFASetup(false);
+    setSuccess('MFA enabled successfully for user');
+    loadUsers();
+  };
   const getRoleColor = (roleLevel: number) => {
     switch (roleLevel) {
       case 1: return 'text-red-400 bg-red-900/30';
@@ -129,6 +142,22 @@ export function UserManagement({ currentUser }: UserManagementProps) {
     );
   }
 
+  if (showMFASetup) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-white">Setup Multi-Factor Authentication</h2>
+          <button
+            onClick={() => setShowMFASetup(false)}
+            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
+          >
+            Back to User Management
+          </button>
+        </div>
+        <MFASetup userId={mfaUserId} onMFAEnabled={handleMFAEnabled} />
+      </div>
+    );
+  }
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -321,6 +350,13 @@ export function UserManagement({ currentUser }: UserManagementProps) {
                   <span className={`px-2 py-1 rounded text-xs font-medium ${getRoleColor(user.role.level)}`}>
                     {user.role.name}
                   </span>
+                  <button
+                    onClick={() => handleSetupMFA(user.id)}
+                    className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                    title="Setup MFA"
+                  >
+                    MFA
+                  </button>
                   {user.id !== currentUser.id && (
                     <>
                       <select

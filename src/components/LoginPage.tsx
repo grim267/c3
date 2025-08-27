@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Shield, Eye, EyeOff, Lock, User, AlertTriangle } from 'lucide-react';
 import { authService } from '../services/authService';
 import { LoginCredentials } from '../types/user';
+import { MFASetup } from './MFASetup';
 
 interface LoginPageProps {
   onLogin: (user: any) => void;
@@ -15,6 +16,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showMFA, setShowMFA] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,17 +35,109 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       const user = await authService.login(credentials);
       onLogin(user);
     } catch (err) {
+      if (err instanceof Error && err.message === 'MFA_REQUIRED') {
+        setShowMFA(true);
+        setError('');
+      } else {
       setError(err instanceof Error ? err.message : 'Authentication failed. Please check your credentials.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleMFASubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const user = await authService.verifyMFA(mfaCode);
+      onLogin(user);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid MFA code');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const handleInputChange = (field: string, value: string) => {
     setCredentials(prev => ({ ...prev, [field]: value }));
     if (error) setError(''); // Clear error when user starts typing
   };
 
+  if (showMFA) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center p-4">
+        <div className="relative w-full max-w-md">
+          <div className="bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-700/50 p-8">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
+                <Shield className="h-8 w-8 text-white" />
+              </div>
+              <h1 className="text-2xl font-bold text-white mb-2">
+                Multi-Factor Authentication
+              </h1>
+              <p className="text-gray-400 text-sm">
+                Enter the 6-digit code from your authenticator app
+              </p>
+            </div>
+
+            {error && (
+              <div className="mb-6 bg-red-900/30 border border-red-700/50 rounded-lg p-3 flex items-center space-x-2">
+                <AlertTriangle className="h-4 w-4 text-red-400 flex-shrink-0" />
+                <span className="text-red-300 text-sm">{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleMFASubmit} className="space-y-6">
+              <div>
+                <label htmlFor="mfaCode" className="block text-sm font-medium text-gray-300 mb-2">
+                  Authentication Code
+                </label>
+                <input
+                  id="mfaCode"
+                  type="text"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white text-center text-2xl tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  placeholder="000000"
+                  maxLength={6}
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading || mfaCode.length !== 6}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Verifying...</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="h-5 w-5" />
+                    <span>Verify Code</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => setShowMFA(false)}
+                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                Back to Login
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center p-4">
       {/* Background Pattern */}

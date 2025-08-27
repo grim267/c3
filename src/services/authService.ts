@@ -1,9 +1,11 @@
 import { supabase } from '../lib/supabaseClient';
 import { User, UserRole, LoginCredentials, CreateUserData } from '../types/user';
+import { MFAConfig } from '../types/healthcare';
 import bcrypt from 'bcryptjs';
 
 class AuthService {
   private currentUser: User | null = null;
+  private pendingMFAUser: User | null = null;
 
   async login(credentials: LoginCredentials): Promise<User> {
     // Query the users table with proper joins for role information
@@ -20,7 +22,9 @@ class AuthService {
         last_login,
         created_at,
         updated_at,
-        createdBy
+        createdBy,
+        mfa_enabled,
+        mfa_secret
       `)
       .eq('username', credentials.username)
       .eq('is_active', true)
@@ -32,6 +36,12 @@ class AuthService {
 
     // In a real implementation, verify password hash
     // For demo purposes, we'll accept any password
+    
+    // Check if MFA is required
+    if (data.mfa_enabled) {
+      this.pendingMFAUser = this.transformDbUserToAppUser(data);
+      throw new Error('MFA_REQUIRED');
+    }
     
     // Update last login
     await supabase
@@ -45,6 +55,60 @@ class AuthService {
     return this.currentUser;
   }
 
+  async verifyMFA(code: string): Promise<User> {
+    if (!this.pendingMFAUser) {
+      throw new Error('No pending MFA verification');
+    }
+
+    // In production, verify TOTP code against stored secret
+    // For demo, accept any 6-digit code
+    if (code.length !== 6) {
+      throw new Error('Invalid MFA code');
+    }
+
+    // Update last login
+    await supabase
+      .from('users')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', this.pendingMFAUser.id);
+
+    this.currentUser = this.pendingMFAUser;
+    this.pendingMFAUser = null;
+    localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+    return this.currentUser;
+  }
+
+  async enableMFA(userId: string, secret: string, backupCodes: string[]): Promise<void> {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        mfa_enabled: true,
+        mfa_secret: secret,
+        backup_codes: backupCodes,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (error) throw error;
+  }
+
+  async disableMFA(userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        mfa_enabled: false,
+        mfa_secret: null,
+        backup_codes: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (error) throw error;
+  }
+
+  getPendingMFAUser(): User | null {
+    return this.pendingMFAUser;
+  }
   private transformDbUserToAppUser(dbUser: any): User {
     const [firstName, lastName] = dbUser.full_name.split(' ');
     return {
