@@ -45,7 +45,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
   const safeAnomalies = anomalies || [];
   const safeNetworkTraffic = networkTraffic || [];
 
-  const criticalIncidents = safeIncidents.filter(i => i.severity === 'critical').length;
+  const criticalIncidentsCount = safeIncidents.filter(i => i.severity === 'critical').length;
   const highIncidents = safeIncidents.filter(i => i.severity === 'high').length;
   const activeIncidents = safeIncidents.filter(i => i.status !== 'resolved').length;
   const onlineSystemsCount = safeSystemStatus.filter(s => s.status === 'online').length;
@@ -63,7 +63,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
     },
     {
       title: 'Critical Incidents',
-      value: criticalIncidents + criticalAnomalies,
+      value: criticalIncidentsCount + criticalAnomalies,
       icon: AlertTriangle,
       color: 'text-orange-400',
       bgColor: 'bg-orange-500/20'
@@ -86,7 +86,6 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
 
   const sidebarStats = {
     activeThreats: activeIncidents + highConfidenceThreats,
-    criticalIncidents: criticalIncidents + criticalAnomalies,
     networkTraffic: safeNetworkTraffic.length,
     systemsOnline: `${onlineSystemsCount}/${safeSystemStatus.length}`,
     activeAlerts: safeAlerts.filter(a => !a.acknowledged && !a.isDuplicate).length,
@@ -135,7 +134,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
               <h3 className="text-lg font-semibold text-white mb-4">Critical Incidents Overview</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-red-900/30 rounded-lg p-4">
-                  <div className="text-red-400 text-2xl font-bold">{criticalIncidents}</div>
+                  <div className="text-red-400 text-2xl font-bold">{criticalIncidentsCount}</div>
                   <div className="text-gray-400 text-sm">Critical Incidents</div>
                 </div>
                 <div className="bg-orange-900/30 rounded-lg p-4">
@@ -251,7 +250,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
               <h3 className="text-lg font-semibold text-white mb-4">Incident Statistics</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-red-900/30 rounded-lg p-4">
-                  <div className="text-red-400 text-xl font-bold">{criticalIncidents}</div>
+                  <div className="text-red-400 text-xl font-bold">{criticalIncidentsCount}</div>
                   <div className="text-gray-400 text-sm">Critical</div>
                 </div>
                 <div className="bg-orange-900/30 rounded-lg p-4">
