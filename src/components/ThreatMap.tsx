@@ -82,7 +82,6 @@ export function ThreatMap({ incidents }: ThreatMapProps) {
                   'bg-blue-500'
                 }`}></div>
             </div>
-            </div>
           ))}
         </div>
 
